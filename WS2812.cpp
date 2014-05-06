@@ -59,7 +59,7 @@
 /*  chipKIT WF32  Dout pin 11; unusable pins 12, 13-LED1                */
 /*  chipKIT Max32 Dout pin 43 or (51 with JP4 in master);               */
 /*          unusable pins 29,50,52                                      */
-/*                                                                      */
+/*  Fubarino SD 1.5 Dout pin 26                                         */
 /*  WARNING: currently this code assumes SPI2. Of the chipKIT boards    */
 /*  this works on (WF32/Max32), the standard Arduino SPI just happens   */
 /*  to always be SPI2, but this is NOT generalized code!                */
