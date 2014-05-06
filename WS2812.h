@@ -61,7 +61,7 @@
 /************************************************************************/
 #include <WProgram.h>
 
-#if !(defined(_BOARD_WF32_) || defined(_BOARD_MEGA_))
+#if !(defined(_BOARD_WF32_) ||  defined(_BOARD_FUBARINO_SD_)|| defined(_BOARD_MEGA_))
 #error Board does not support needed DMA or SPI resources
 #endif
 
