@@ -132,8 +132,8 @@ void setup()
     // Pin PIN_LED1 and PIN_LED2 have LEDs connecton on most boards:
     // Early Max32 boards do not have a LED2, so just comment LED2 out 
     // if LED 2 does not exist.
-    pinMode(PIN_LED2, OUTPUT); 
-    digitalWrite(PIN_LED2, led);
+    pinMode(PIN_LED1, OUTPUT); 
+    digitalWrite(PIN_LED1, led);
 
     tStart = millis();
 
@@ -198,7 +198,7 @@ void loop()
     if(millis() - tStart > 500)
     {
         led ^= HIGH;
-        digitalWrite(PIN_LED2, led);
+        digitalWrite(PIN_LED1, led);
         tStart = millis();
     }
 }
