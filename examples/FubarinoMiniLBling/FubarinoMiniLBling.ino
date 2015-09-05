@@ -70,7 +70,8 @@
 /************************************************************************/
 #include <WS2812.h>
 
-#define CDEVICES 144
+//242 is max number
+#define CDEVICES 242
 
 WS2812::GRB rgGRB[CDEVICES] =
 {
@@ -93,11 +94,33 @@ WS2812::GRB rgGRB[CDEVICES] =
     {0,     0,      0x01    },
     {0,     0xFF,   0       },
     {0xFF,  0,      0       },
+    {0,     0,      0xFF    }/*,
+    {0,     0,      0xFF    },
+    {0,     0xFF,   0       },
+    {0xFF,  0,      0       },
+    {0,     0xFF,   0xFF    },
+    {0xFF,  0,      0       },
+    {0,     0,      0xFF    },
+    {0x10,  0,      0       },
+    {0,     0x10,   0       },
+    {0,     0,      0x10    },
+    {0,     0xFF,   0xFF    },
+    {0,     0xFF,   0       },
+    {0x55,  0x55,   0x55    },
+    {0,     0,      0xFF    },
+    {0x20,  0x20,   0       },
+    {0x01,  0,      0       },
+    {0,     0x01,   0       },
+    {0,     0,      0x01    },
+    {0,     0xFF,   0       },
+    {0xFF,  0,      0       },
     {0,     0,      0xFF    }
+    */
 };
 
 uint32_t    tStart  = 0;
 uint32_t    led     = HIGH;
+int count = 0;
 
 WS2812      ws2812;
 uint8_t     rgbPatternBuffer[CBWS2812PATBUF(CDEVICES)];
@@ -111,7 +134,7 @@ typedef enum {
 
 STATE state = LOADPAT;
 uint32_t tWaitShift = 0;
-#define MSSHIFT 25
+#define MSSHIFT 50
 
 /***    void setup()
  *
@@ -127,7 +150,8 @@ uint32_t tWaitShift = 0;
  *      
  * ------------------------------------------------------------ */
 void setup() 
-{                
+{               
+    Serial.begin(9600); 
     // initialize the digital pin as an output.
     // Pin PIN_LED1 and PIN_LED2 have LEDs connecton on most boards:
     // Early Max32 boards do not have a LED2, so just comment LED2 out 
@@ -140,6 +164,9 @@ void setup()
     ws2812.begin(CDEVICES, rgbPatternBuffer, sizeof(rgbPatternBuffer), false);
     tWaitShift = millis();
     mapPps(29, PPS_OUT_SDO2);
+
+    digitalWrite(PIN_LED1, LOW);
+    
 }
 
 /***    void loop()
@@ -180,6 +207,13 @@ void loop()
             }
             memcpy(&rgGRB[0], &grbT, sizeof(WS2812::GRB));
             state = WAIT;
+            count++;
+            if (count > CDEVICES)
+            {
+              Serial.println("end: CDEVICES");
+              count = 0;
+            }
+            Serial.println(count);
             break;
 
         case WAIT:
