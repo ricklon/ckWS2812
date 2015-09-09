@@ -42,11 +42,12 @@
 /************************************************************************/
 /*  Revision History:                                                   */
 /*                                                                      */
-/*    5/1/2014(KeithV): Created                                        */
+/*    5/1/2014(KeithV): Created                                         */
+/*    9/8/2015 (BPS): Updated for more accurate timing and less RAM     */
 /************************************************************************/
 /************************************************************************/
 /*                                                                      */
-/*  Supports the WS2812 signaling to drive up to 1000 devices           */
+/*  Supports the WS2812 signalling to drive up to 1000 devices          */
 /*  The output signal is 3.3v, below that which is needed to            */
 /*  to drive a WS2812, so a level shifter is needed to provide          */
 /*  the correct voltages. The library also supports generating an       */
@@ -60,8 +61,11 @@
 /*  chipKIT Max32 Dout pin 43 or (51 with JP4 in master);               */
 /*          unusable pins 29,50,52                                      */
 /*  Fubarino SD 1.5 Dout pin 26                                         */
+/*  Fubarino Mini Dout pin 29                                           */
+/*  Any PIC32 with DMA - you need to figure out the Dout pin            */
+/*                                                                      */
 /*  WARNING: currently this code assumes SPI2. Of the chipKIT boards    */
-/*  this works on (WF32/Max32), the standard Arduino SPI just happens   */
+/*  this works on, the standard Arduino SPI just happens                */
 /*  to always be SPI2, but this is NOT generalized code!                */
 /*                                                                      */
 /*  The spec says that Dout Vih = .7Vdd and Vdd = 6v-7v However...      */
@@ -127,7 +131,8 @@ void WS2812::init(void)
  *                          The application allocates this and should be 
  *                          CBWS2812PATBUF(__cDevices) bytes long.
  *
- *          cbPatternBuffer: This should be CBWS2812PATBUF(__cDevices) or larger
+ *          cbPatternBuffer: Size of pPatternBuffer in bytes. This should be 
+ *                          CBWS2812PATBUF(__cDevices) or larger
  *
  *          fInvert:        Because the WS2812 does not have a VinH <= 3.3 when Vcc >= 4.7v
  *                          External hardware may be needed to level shift the 3.3v SDO output
@@ -137,6 +142,16 @@ void WS2812::init(void)
  *                          to the WS2812 you would need to invert the signal coming out of SDO.
  *                          If fInvert is true, the SDO output signal will be inverted from what
  *                          the WS2812 would normally take. By default, the is "false".
+ *
+ *          cBitWidth:      The number of nanoseconds that the width of a single bit (high + low)
+ *                          should be.
+ *
+ *          cBit1High:      The number of nanoseconds that a "1" bit should be high for. (must be
+ *                          less than cBitWidth)
+ * 
+ *          cBit0High:      The number of nanoseconds that a "0" bit should be high for. (must be
+ *                          less than cBitWidth)
+ *
  *
  *    Return Values:
  *          True if the WS2812 library was successfully initialized
@@ -148,7 +163,14 @@ void WS2812::init(void)
  *      Initializes the WS2812 library and starts streaming a refresh cycle out on SDO
  *
  * ------------------------------------------------------------ */
-bool WS2812::begin(uint32_t cDevices, uint8_t * pPatternBuffer, uint32_t cbPatternBuffer, bool fInvert)
+bool WS2812::begin(
+    uint32_t cDevices, 
+    uint8_t * pPatternBuffer, 
+    uint32_t cbPatternBuffer, 
+    bool fInvert,
+    uint16_t cBitWidth, 
+    uint16_t cBit1High, 
+    uint16_t cBit0High)
 {
     if(_fInit)
     {
@@ -166,6 +188,16 @@ bool WS2812::begin(uint32_t cDevices, uint8_t * pPatternBuffer, uint32_t cbPatte
     _cbPatternBuffer    =   cbPatternBuffer;
     _fInit              =   InitWS2812(pPatternBuffer, cbPatternBuffer, fInvert);
     _fInvert            =   fInvert;
+
+    /* All three of the below values are defaulted to values that will work well with many CPU clocks speeds
+     * and WS2812/WS2812B LEDs. You can override the defaults if you want to use different timings for different
+     * LEDs. */
+    /* This is the number of SPI clocks that represent a total symbol in the SPI DMA bit stream buffer. */
+    _iBitSPIClocks = cBitWidth;
+    /* This is the number of SPI clocks that represent the high portion of a 1 symbol. */
+    _iBit1SPIClocksHigh = cBit1High; 
+    /* This is the number of SPI clocks that represent the high portion of a 0 symbol. */
+    _iBit0SPIClocksHigh = cBit0High;
 
     if(!_fInit)
     {
@@ -211,9 +243,9 @@ void WS2812::end(void)
  *      refresh the chain; so the DMA will be left in
  *      the reset cycle. Since the pattern isn't 
  *      being refreshed, the WS2812 may 
- *      incure noise on the chain and start displaying
+ *      incur noise on the chain and start displaying
  *      unexpected results. updateLEDs() should be called
- *      with a new pattern to reingage the pattern buffer
+ *      with a new pattern to re-engage the pattern buffer
  *      on a regular refresh cycle.
  * ------------------------------------------------------------ */
 void  WS2812::abortUpdate(void)
@@ -388,11 +420,13 @@ void __attribute__((always_inline)) WS2812::applyBit(uint32_t fOne)
     if(fOne)
     {
         i = 0;
-
-        // .7us or 14 ones
-        while(i < 14)
+        
+        // See WS2812.h for explanation on these bit timings
+        // This while loops inserts '1's into the bitstream for as many SPI
+        // clocks as we need in order to represent the 'high' part of a '1' symbol
+        while(i < _iBit1SPIClocksHigh)
         {
-            for(; _iBit<8 && i<14; _iBit++, i++)
+            for(; _iBit < 8 && i < _iBit1SPIClocksHigh; _iBit++, i++)
             {
                 _pPatternBuffer[_iByte] |= ((uint8_t)(1 << (7-_iBit)));
             }
@@ -404,10 +438,9 @@ void __attribute__((always_inline)) WS2812::applyBit(uint32_t fOne)
             }
         }
 
-        //.6us or 12 zeros
         // since the buffer is init with zeros
-        // just skip forward
-        _iBit   += 12;
+        // just skip forward to fill out the rest of the symbol with zeros.
+        _iBit   += _iBitSPIClocks - _iBit1SPIClocksHigh;
         _iByte  += _iBit / 8;
         _iBit   %= 8;
      }
@@ -417,10 +450,11 @@ void __attribute__((always_inline)) WS2812::applyBit(uint32_t fOne)
     {
         i = 0;
 
-        // .35us or 7 ones
-        while(i < 7)
+        // This while loops inserts '1's into the bitstream for as many SPI
+        // clocks as we need in order to represent the 'high' part of a '0' symbol
+        while(i < _iBit0SPIClocksHigh)
         {
-            for(; _iBit<8 && i<7; _iBit++, i++)
+            for(; _iBit < 8 && i < _iBit0SPIClocksHigh; _iBit++, i++)
             {
                 _pPatternBuffer[_iByte] |= ((uint8_t)(1 << (7-_iBit)));
             }
@@ -432,10 +466,9 @@ void __attribute__((always_inline)) WS2812::applyBit(uint32_t fOne)
             }
         }
 
-        // .8us or 16 zeros
         // since the buffer is init with zeros
-        // just skip forward
-        _iBit   += 16;
+        // just skip forward to fill out the rest of the symbol with zeros.
+        _iBit   += _iBitSPIClocks - _iBit0SPIClocksHigh;
         _iByte  += _iBit / 8;
         _iBit   %= 8;
     }

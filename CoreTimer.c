@@ -57,6 +57,12 @@
 
 #define TICKSPERSHORTCHECK  (5 * CORE_TICK_RATE)        // 5ms
 #define TICKSPERREFRESH     (30 * CORE_TICK_RATE)       // 30ms
+/* This is the clock rate for the SPI port. This is the fundamental unit that
+ * the 1 and 0 high and low times are expressed in. This value of 3MHz was
+ * picked because it allows for a low error rate on the various chipKIT
+ * boards, and it still allows the timing requirements of the WS2812 LEDs to
+ * be met. */
+#define WS2812_SPI_CLOCK_RATE   (3000000)
 
 #define KVA_2_PA(v) (((uint32_t) (v)) & 0x1fffffff)
 #define read_count(dest) __asm__ __volatile__("mfc0 %0,$9" : "=r" (dest))
@@ -130,7 +136,7 @@ uint32_t WS2812TimerService(uint32_t curTime)
  *                          the WS2812 would normally take. By default, the is "false".
  *
  *    Return Values:
- *          True if the core timer can be aquired and initialization succeeded.
+ *          True if the core timer can be acquired and initialization succeeded.
  *
  *    Description:
  *
@@ -140,7 +146,7 @@ uint32_t WS2812TimerService(uint32_t curTime)
  *
  *      Also, initialize 2 DMA channels, one to shift out
  *      the pattern buffer, the other to maintain zeros
- *      for the restart / reset patteren (RES).
+ *      for the restart / reset pattern (RES).
  *
  * ------------------------------------------------------------ */
 uint32_t InitWS2812(uint8_t * pPatternBuffer, uint32_t cbPatternBuffer, uint32_t fInvert)
@@ -155,8 +161,8 @@ uint32_t InitWS2812(uint8_t * pPatternBuffer, uint32_t cbPatternBuffer, uint32_t
     SPI2CONbits.STXISEL = 0b10; // trigger DMA event when the ENBUF is half empty
 //    SPI2CONbits.DISSDI  = 1;  // Disable the SDI pin, allow it to be used for GPIO (not implemented on an MX6)
     SPI2STAT            = 0;    // clear status register
-    SPI2BRG             = (__PIC32_pbClk / (2 * 20000000)) - 1;  // 20MHz, 50ns
-
+    SPI2BRG             = (__PIC32_pbClk / (2 * WS2812_SPI_CLOCK_RATE)) - 1;
+    
     IEC1bits.SPI2RXIE   = 0;    // disable SPI interrupts
     IEC1bits.SPI2TXIE   = 0;    // disable SPI interrupts
     IEC1bits.SPI2EIE    = 0;    // disable SPI interrupts
@@ -229,7 +235,7 @@ uint32_t InitWS2812(uint8_t * pPatternBuffer, uint32_t cbPatternBuffer, uint32_t
     DCH1DSIZ            = 1;                    // 1 byte at the destination
     DCH1CSIZ            = 1;                    // only transfer 1 byte per event
 
-    // initial time for the core serivce routine
+    // initial time for the core service routine
     read_count(tWS2812LastRun);
 
     // attach the core service routine
