@@ -34,10 +34,11 @@
 /*  Revision History:                                                   */
 /*                                                                      */
 /*    5/1/2014(KeithV): Created                                         */
+/*    9/8/2015 (BPS): Updated for more accurate timing and less RAM     */
 /************************************************************************/
 /************************************************************************/
 /*                                                                      */
-/*  Supports the WS2812 signalling to drive up to 1000 devices           */
+/*  Supports the WS2812 signalling to drive up to 1000 devices          */
 /*                                                                      */
 /************************************************************************/
 /************************************************************************/
@@ -63,7 +64,11 @@
 
 /* CPUs with _DMAC defined have DMA. */
 #if !defined(_DMAC)
-#error Board does not support needed DMA or SPI resources
+  #if defined(__PIC32MZ__)
+    #error PIC32MZ based chipKIT boards are not yet supported by this library.
+  #else
+    #error Board does not support needed DMA or SPI resources
+  #endif
 #endif
 
 /*
