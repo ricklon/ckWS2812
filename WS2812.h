@@ -62,7 +62,6 @@
 /************************************************************************/
 #include <WProgram.h>
 
-<<<<<<< HEAD
 /* CPUs with _DMAC defined have DMA. */
 #if !defined(_DMAC)
   #if defined(__PIC32MZ__)
@@ -70,10 +69,6 @@
   #else
     #error Board does not support needed DMA or SPI resources
   #endif
-=======
-#if !(defined(_BOARD_WF32_) ||  defined(_BOARD_FUBARINO_SD_) || defined(_BOARD_MEGA_) || defined(_BOARD_FUBARINO_MINI_))
-#error Board does not support needed DMA or SPI resources
->>>>>>> master
 #endif
 
 /*
@@ -175,5 +170,4 @@ private:
     void applyColor(uint8_t color);
     void applyBit(uint32_t fOne);
 };
-
 
