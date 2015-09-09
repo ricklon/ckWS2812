@@ -70,7 +70,7 @@
 /************************************************************************/
 #include <WS2812.h>
 
-#define CDEVICES 20
+#define CDEVICES 144
 
 WS2812::GRB rgGRB[CDEVICES] =
 {
@@ -111,7 +111,7 @@ typedef enum {
 
 STATE state = LOADPAT;
 uint32_t tWaitShift = 0;
-#define MSSHIFT 250
+#define MSSHIFT 25
 
 /***    void setup()
  *
@@ -139,6 +139,7 @@ void setup()
 
     ws2812.begin(CDEVICES, rgbPatternBuffer, sizeof(rgbPatternBuffer), false);
     tWaitShift = millis();
+    mapPps(29, PPS_OUT_SDO2);
 }
 
 /***    void loop()
