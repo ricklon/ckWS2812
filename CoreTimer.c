@@ -163,6 +163,20 @@ uint32_t InitWS2812(uint8_t * pPatternBuffer, uint32_t cbPatternBuffer, uint32_t
     SPI2STAT            = 0;    // clear status register
     SPI2BRG             = (__PIC32_pbClk / (2 * WS2812_SPI_CLOCK_RATE)) - 1;
     
+#if defined(__PIC32MZ__)
+    IEC4bits.SPI2RXIE   = 0;    // disable SPI interrupts
+    IEC4bits.SPI2TXIE   = 0;    // disable SPI interrupts
+    IEC4bits.SPI2EIE    = 0;    // disable SPI interrupts
+    IFS4bits.SPI2RXIF   = 0;    // disable SPI interrupts
+    IFS4bits.SPI2TXIF   = 0;    // disable SPI interrupts
+    IFS4bits.SPI2EIF    = 0;    // disable SPI interrupts
+
+    IEC4bits.DMA0IE     = 0;
+    IFS4bits.DMA0IF     = 0;
+
+    IEC4bits.DMA1IE     = 0;
+    IFS4bits.DMA1IF     = 0;
+#else
     IEC1bits.SPI2RXIE   = 0;    // disable SPI interrupts
     IEC1bits.SPI2TXIE   = 0;    // disable SPI interrupts
     IEC1bits.SPI2EIE    = 0;    // disable SPI interrupts
@@ -175,10 +189,16 @@ uint32_t InitWS2812(uint8_t * pPatternBuffer, uint32_t cbPatternBuffer, uint32_t
 
     IEC1bits.DMA1IE     = 0;
     IFS1bits.DMA1IF     = 0;
+#endif
 
     DMACONbits.ON       = 1;    // turn on the DMA controller
-    IEC1CLR=0x00010000;         // disable DMA channel 0 interrupts
-    IFS1CLR=0x00010000;         // clear existing DMA channel 0 interrupt flag
+#if defined(__PIC32MZ__)
+    IEC4bits.DMA0IE     = 0;    // disable DMA channel 0 interrupts
+    IFS4bits.DMA0IF     = 0;    // clear existing DMA channel 0 interrupt flag
+#else
+    IEC1bits.DMA0IE     = 0;    // disable DMA channel 0 interrupts
+    IFS1bits.DMA0IF     = 0;    // clear existing DMA channel 0 interrupt flag
+#endif
 
     // Set up DMA channel 0
     DCH0CON             = 0;    // clear it
@@ -187,13 +207,20 @@ uint32_t InitWS2812(uint8_t * pPatternBuffer, uint32_t cbPatternBuffer, uint32_t
     DCH0CONbits.CHPRI   = 0b11; // highest priority
 
     DCH0ECON            = 0;    // clear it
+#if defined(__PIC32MZ__)
+    DCH0ECONbits.CHSIRQ = _SPI2_TX_VECTOR;// SPI2TX 1/2 empty notification
+#else
     DCH0ECONbits.CHSIRQ = _SPI2_TX_IRQ;   // SPI2TX 1/2 empty notification
+#endif
     DCH0ECONbits.SIRQEN = 1;    // enable IRQ transfer enables
 
     DCH0INT             = 0;    // do not trigger any events
     DCH0INTbits.CHBCIF  = 0;    // clear IF bit
 
-#if defined(_BOARD_FUBARINO_MINI_)
+#if defined(__PIC32MZ__)
+    IPC33bits.DMA0IP     = 7;    // priority 7
+    IPC33bits.DMA1IS     = 0;    // sub priority 0
+#elif defined(__PIC32_PPS__)
     IPC10bits.DMA0IP     = 7;    // priority 7
     IPC10bits.DMA1IS     = 0;    // sub priority 0
 #else
@@ -216,7 +243,11 @@ uint32_t InitWS2812(uint8_t * pPatternBuffer, uint32_t cbPatternBuffer, uint32_t
     DCH1CONbits.CHPRI   = 0b11; // highest priority
 
     DCH1ECON            = 0;    // clear it
+#if defined(__PIC32MZ__)
+    DCH1ECONbits.CHSIRQ = _SPI2_TX_VECTOR;   // SPI2TX 1/2 empty notification
+#else
     DCH1ECONbits.CHSIRQ = _SPI2_TX_IRQ;   // SPI2TX 1/2 empty notification
+#endif
     DCH1ECONbits.SIRQEN = 1;    // enable IRQ transfer enables
 
     DCH1INT             = 0;    // do not trigger any events
@@ -245,8 +276,13 @@ uint32_t InitWS2812(uint8_t * pPatternBuffer, uint32_t cbPatternBuffer, uint32_t
         // we enable in the refresh cycle until a pattern
         // is loaded in the main sketch.
         fWS2812Updating = true;
+#if defined(__PIC32MZ__)
+        IFS4bits.DMA0IF     = 0;
+        IEC4bits.DMA0IE     = 1;
+#else
         IFS1bits.DMA0IF     = 0;
         IEC1bits.DMA0IE     = 1;
+#endif
         DCH1CONbits.CHEN    = 1;    // turn DMA channel 1 ON; just zero output
         SPI2CONbits.ON      = 1;
         return(1);                  // success

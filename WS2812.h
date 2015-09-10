@@ -64,11 +64,11 @@
 
 /* CPUs with _DMAC defined have DMA. */
 #if !defined(_DMAC)
-  #if defined(__PIC32MZ__)
-    #error PIC32MZ based chipKIT boards are not yet supported by this library.
-  #else
-    #error Board does not support needed DMA or SPI resources
-  #endif
+//  #if defined(__PIC32MZ__)
+//    #error PIC32MZ based chipKIT boards are not yet supported by this library.
+//  #else
+//    #error Board does not support needed DMA or SPI resources
+//  #endif
 #endif
 
 /*
@@ -111,8 +111,8 @@
 #define CBWS2812PATBUF(__cDevices)        (WS2812_MAX_SPI_BYTES_PER_LED * __cDevices)
 /* Default total, 1 high and 0 high clock counts. Can be over-ridden on begin() */
 #define WS2812_DEFAULT_BIT_WIDTH_CLKS      4  // 1332nS  
-#define WS2812_DEFAULT_BIT_1_HIGH_CLKS     1  //  333nS
-#define WS2812_DEFAULT_BIT_0_HIGH_CLKS     2  //  666nS
+#define WS2812_DEFAULT_BIT_0_HIGH_CLKS     1  //  333nS
+#define WS2812_DEFAULT_BIT_1_HIGH_CLKS     2  //  666nS
 
 class WS2812 {
    
